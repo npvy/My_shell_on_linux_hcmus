@@ -12,7 +12,7 @@
 
 #define MAX_LINE 80 /* The maximum length of a command */
 #define BUFFER_SIZE 50
-#define buffer "\n\Shell Command History:\n"
+#define buffer "\n Shell Command History:\n"
 
 // Khai bao
 char history[100][BUFFER_SIZE]; //history array to store history commands
