@@ -1,4 +1,4 @@
-﻿#include <stdio.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 
 #define MAX_LINE 80 /* The maximum length of a command */
 #define BUFFER_SIZE 50
-#define buffer "\n Shell Command History:\n"
+#define buffer "\n\Shell Command History:\n"
 
 // Khai bao
 char history[100][BUFFER_SIZE]; //history array to store history commands
@@ -268,12 +268,8 @@ void Run_history()
 			// otherwise returns to the formatCommand() function.
 			else
 			{
-				i++;
 				if (hasAmpersand == false)
-				{
-					i++;
 					wait(NULL);
-				}
 			}
 		}
 	}
@@ -281,31 +277,32 @@ void Run_history()
 
 int main(int argc, char* argv[])
 {
-	//bool should_run = true;
-	//while (should_run) {
-	//	int temp;
-	//	printf("osh->");
+	bool should_run = true;
+	while (should_run) {
+		int temp;
+		printf("osh->");
 
-	//	// Doc dong lenh duoc nhap vao
-	//	char commandline[MAX_LENGTH];
-	//	fgets(commandline, MAX_LENGTH, stdin);
-	//	commandline[strlen(commandline) - 1] = '\0';
+		// Doc dong lenh duoc nhap vao
+		char commandline[MAX_LENGTH];
+		fgets(commandline, MAX_LENGTH, stdin);
+		commandline[strlen(commandline) - 1] = '\0';
 
-	//	// Neu command la exit thi thoat
-	//	if (strcmp(commandline, "exit") == 0) exit(0);
+		// Neu command la exit thi thoat
+		if (strcmp(commandline, "exit") == 0) exit(0);
 
-	//	char* commandArgToken = NULL;
-	//	// Mang luu cac tham so de truyen vao execvp
-	//	char* args[64];
-	//	bool hasAmpersand = false;
+		char* commandArgToken = NULL;
+		// Mang luu cac tham so de truyen vao execvp
+		char* args[64];
+		bool hasAmpersand = false;
 
-	//	// Xu li chuoi lenh da nhap
-	//	parse(commandline, args, commandArgToken, &hasAmpersand);
+		// Xu li chuoi lenh da nhap
+		parse(commandline, args, commandArgToken, &hasAmpersand);
 
-	//	// Thuc thi lenh da nhap
-	//	execute(args, hasAmpersand);
-	//}
-	Run_history();
+		// Thuc thi lenh da nhap
+		execute(args, hasAmpersand);
+		Run_history();
+	}
+	
 	return 0;
 }
 
