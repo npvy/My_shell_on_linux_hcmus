@@ -12,11 +12,7 @@
 
 #define MAX_LINE 80 /* The maximum length of a command */
 #define BUFFER_SIZE 50
-#define buffer "\n\Shell Command History:\n"
-
-// Khai bao
-char history[100][BUFFER_SIZE]; //history array to store history commands
-int count = 0;
+#define HISTORY_LIMIT 100
 
 // Xu li chuoi da nhap vao
 void parse(char* commandline, char **args, char* commandArgToken, bool *hasAmpersand)
@@ -79,216 +75,102 @@ void execute(char** args, bool hasAmpersand)
 }
 
 //Bo sung
-
-// Hàm này sẽ chỉ in 100 lệnh mới nhất trong lịch sử
-void displayHistory()
+void add_history(char* history[], char* commandline, int* count) 
 {
-
-	printf("Shell command history:\n");
-
-	int i;
-	int j = 0;
-	int histCount = count;
-
-	//loop for iterating through commands
-	for (i = 0; i < 100; i++)
-	{
-		//command index
-		printf("%d.  ", histCount);
-		while (history[i][j] != '\n' && history[i][j] != '\0')
-		{
-			//printing command
-			printf("%c", history[i][j]);
-			j++;
-		}
-		printf("\n");
-		j = 0;
-		histCount--;
-		if (histCount == 0)
-			break;
-	}
-	printf("\n");
-}
-
-//Fuction to get the command from shell, tokenize it and set the args parameter
-int formatCommand(char inputBuffer[], char *args[], bool *hasAmpersand)
-{
-	int length; // # of chars in command line
-	int i;     // loop index for inputBuffer
-	int start;  // index of beginning of next command
-	int ct = 0; // index of where to place the next parameter into args[]
-	int hist;
-	//read user input on command line and checking whether the command is !! or !n
-
-	length = read(STDIN_FILENO, inputBuffer, MAX_LINE);
-
-	start = -1;
-
-	if (length == 0)
-		exit(0);   //end of command
-
-	if (length < 0)
-	{
-		printf("Command not read\n");
-		exit(-1);
-	}
-
-	//kiem tra tung ki tu
-	for (i = 0; i < length; i++)
-	{
-		switch (inputBuffer[i])
-		{
-		case ' ':
-		case '\t':               // to seperate arguments
-			if (start != -1)
-			{
-				args[ct] = &inputBuffer[start];
-				ct++;
-			}
-			inputBuffer[i] = '\0'; // add a null char at the end
-			start = -1;
-			break;
-
-		case '\n':                 //final char 
-			if (start != -1)
-			{
-				args[ct] = &inputBuffer[start];
-				ct++;
-			}
-			inputBuffer[i] = '\0';
-			args[ct] = NULL; // no more args
-			break;
-
-		default:
-			if (start == -1)
-				start = i;
-			if (inputBuffer[i] == '&')
-			{
-				*hasAmpersand = true; //this flag is the differentiate whether the child process is invoked in background
-				inputBuffer[i] = '\0';
-			}
-		}
-	}
-
-	args[ct] = NULL; //if the input line was > 80
-
-	if (strcmp(args[0], "history") == 0)
-	{
-		if (count > 0)
-		{
-			displayHistory();
-		}
-		else
-		{
-			printf("\nNo Commands in the history\n");
-		}
-		return -1;
-	}
-
-	else if (args[0][0] - '!' == 0)
-	{
-		int x = args[0][1] - '0';
-		int z = args[0][2] - '0';
-
-		if (x > count) //second letter check
-		{
-			printf("\nNo Such Command in the history\n");
-			strcpy(inputBuffer, "Wrong command");
-		}
-		else if (z != -48) //third letter check 
-		{
-			printf("\nNo Such Command in the history. Enter <=!99 (buffer size is 100 along with current command)\n");
-			strcpy(inputBuffer, "Wrong command");
-		}
-		else
-		{
-			if (x == -15)//Checking for '!!',ascii value of '!' is 33.
-			{
-				strcpy(inputBuffer, history[0]);  // this will be your 100 th(last) command
-			}
-			else if (x == 0) //Checking for '!0'
-			{
-				printf("Enter proper command");
-				strcpy(inputBuffer, "Wrong command");
-			}
-
-			else if (x >= 1) //Checking for '!n', n >=1
-			{
-				strcpy(inputBuffer, history[count - x]);
-
-			}
-		}
-	}
-	for (i = 99; i > 0; i--) //Moving the history elements one step higher
-		strcpy(history[i], history[i - 1]);
-
-	strcpy(history[0], inputBuffer); //Updating the history array with input buffer
-	count++;
-	if (count > 100)
-	{
-		count = 100;
-	}
-}
-
-void Run_history()
-{
-	char inputBuffer[MAX_LINE]; /* buffer to hold the input command */
-	bool hasAmpersand; // equals true if a command is followed by "&"
-	char *args[MAX_LINE / 2 + 1];/* max arguments */
-	bool should_run = true;
-
-	pid_t pid, tpid;
 	int i;
 
-	while (should_run) //infinite loop for shell prompt
+	// Store the issued command into the history array, removing the first value and shifting the rest of the values over if necessary.
+	for (i = 0; i < HISTORY_LIMIT; i++)
 	{
-		hasAmpersand = false; //*hasAmpersand = false by default
-		printf("osh->");
-		fflush(stdout);
-		if (formatCommand(inputBuffer, args, &hasAmpersand) != -1) // get next command  
+
+		// If the history has already reached its limit, then copy the value from the next value.
+		if (*count >= HISTORY_LIMIT) 
 		{
-			pid = fork();
-
-			if (pid < 0)//if pid is less than 0, forking fails
+			// If the index is not the last index, then copy the value from the next value.
+			if (i < HISTORY_LIMIT - 1)
 			{
-				printf("Fork failed.\n");
-				exit(1);
+				strcpy(history[i], history[i + 1]);
 			}
 
-			else if (pid == 0)//if pid ==0
+			// Copy the new command to the last index.
+			else 
 			{
-				//command not executed
-				if (execvp(args[0], args) == -1)
-				{
-					printf("Error executing command\n");
-				}
-			}
-
-			// if hasAmpersand == false, the parent will wait,
-			// otherwise returns to the formatCommand() function.
-			else
-			{
-				if (hasAmpersand == false)
-					wait(NULL);
+				strcpy(history[i], commandline);
 			}
 		}
+
+		// If the history has not reached the limit, then copy the new command to the first available index.
+		else if (!strcmp(history[i], "\0"))
+		{
+			strcpy(history[i], commandline);
+			break;
+		}
 	}
+	*count += 1; // Increment the history count.
 }
 
 int main(int argc, char* argv[])
 {
 	bool should_run = true;
-	while (should_run) {
+	char commandline[MAX_LENGTH];
+
+	// Initialize command history array.
+	int history_count = 0;
+	char* history[HISTORY_LIMIT];
+
+	int i;
+	for (i = 0; i < HISTORY_LIMIT; i++) 
+	{
+		history[i] = malloc(MAX_LINE);
+		strcpy(history[i], "\0");
+	}
+
+	while (should_run) 
+	{
 		int temp;
 		printf("osh->");
 
 		// Doc dong lenh duoc nhap vao
-		char commandline[MAX_LENGTH];
 		fgets(commandline, MAX_LENGTH, stdin);
+		fflush(stdin);
+
 		commandline[strlen(commandline) - 1] = '\0';
 
 		// Neu command la exit thi thoat
-		if (strcmp(commandline, "exit") == 0) exit(0);
+		if (strcmp(commandline, "exit") == 0)
+		{
+			should_run = false;
+			exit(0);
+		}
+		if (!strcmp(commandline, "history"))
+		{
+			for (i = HISTORY_LIMIT - 1; i >= 0; i--)
+			{
+				if (!strcmp(history[i], "\0"))
+				{
+					continue;
+				}
+				printf("%i %s\n", i + 1 + (history_count > HISTORY_LIMIT ? history_count - HISTORY_LIMIT : 0), history[i]);
+			}
+			continue;
+		}
+
+		// Handle "!!" commandline.
+		else if (!strcmp(commandline, "!!")) 
+		{
+			if (history_count == 0) 
+			{
+				printf("No commands in history.\n");
+				continue;
+			}
+			else 
+			{
+				strcpy(commandline, history_count > HISTORY_LIMIT ? history[HISTORY_LIMIT - 1] : history[history_count - 1]);
+				printf("%s\n", commandline);
+			}
+		}
+		// Store user commandline in history, even if its an invalid command. The "history" command is not stored.
+		add_history(history, commandline, &history_count);
 
 		char* commandArgToken = NULL;
 		// Mang luu cac tham so de truyen vao execvp
@@ -300,9 +182,8 @@ int main(int argc, char* argv[])
 
 		// Thuc thi lenh da nhap
 		execute(args, hasAmpersand);
-		Run_history();
 	}
-	
+
 	return 0;
 }
 
