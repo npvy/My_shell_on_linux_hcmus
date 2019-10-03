@@ -7,15 +7,21 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #define MAX_LENGTH 256
+#define MAX_ARGS 64
 
 #define MAX_LINE 80 /* The maximum length of a command */
 #define BUFFER_SIZE 50
 #define HISTORY_LIMIT 100
 
+#define REDIRECTION_MODE_NONE 0
+#define REDIRECTION_MODE_IN 1
+#define REDIRECTION_MODE_OUT 2
+
 // Xu li chuoi da nhap vao
-void parse(char* commandline, char **args, char* commandArgToken, bool *hasAmpersand)
+void parse(char* commandline, char **args, char* commandArgToken, bool *hasAmpersand, int *redirectionMode)
 {
 	const char* delim = " ";
 	commandArgToken = strtok(commandline, delim);
@@ -34,14 +40,23 @@ void parse(char* commandline, char **args, char* commandArgToken, bool *hasAmper
 	args[i] = NULL;
 
 	if (argCount > 1)
+	{
 		if (strcmp(args[argCount - 1], "&") == 0)
 		{
 			args[argCount - 1] = NULL;
 			*hasAmpersand = true;
+			argCount--;
 		}
+
+		if (argCount > 2)
+		{
+			if (strcmp(args[argCount - 2], "<") == 0) *redirectionMode = REDIRECTION_MODE_IN;
+			if (strcmp(args[argCount - 2], ">") == 0) *redirectionMode = REDIRECTION_MODE_OUT;
+		}
+	}
 }
 
-void execute(char** args, bool hasAmpersand)
+void execute(char** args, bool hasAmpersand, int redirectionMode)
 {
 	pid_t childPID = fork();
 	pid_t pid;
@@ -56,6 +71,15 @@ void execute(char** args, bool hasAmpersand)
 	else if (childPID == 0)
 	{
 		// Truong hop process dang chay la child process
+
+		int fd;
+		if (redirectionMode = REDIRECTION_MODE_OUT)
+		{
+			fd = open("output.txt", O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU);
+			if(fd == -1) perror("fd: ");
+			dup2(fd, 1);
+		}
+
 		// Truyen cac tham so da luu trong args vao execvp
 
 		if (execvp(args[0], args) < 0)
@@ -63,6 +87,8 @@ void execute(char** args, bool hasAmpersand)
 			printf("[ERROR]: Exec failed\n");
 			exit(1);
 		}
+
+		close(fd);
 	}
 	else 
 	{
@@ -174,16 +200,18 @@ int main(int argc, char* argv[])
 
 		char* commandArgToken = NULL;
 		// Mang luu cac tham so de truyen vao execvp
-		char* args[64];
+		char* args[MAX_ARGS];
 		bool hasAmpersand = false;
 
+		// Flag to handle command differently if it contains a redirection operator "<" or ">"
+		int redirectionMode = REDIRECTION_MODE_NONE; // default is NONE
+
 		// Xu li chuoi lenh da nhap
-		parse(commandline, args, commandArgToken, &hasAmpersand);
+		parse(commandline, args, commandArgToken, &hasAmpersand, &redirectionMode, &redirectedFilepath);
 
 		// Thuc thi lenh da nhap
-		execute(args, hasAmpersand);
+		execute(args, hasAmpersand, redirectionMode);
 	}
 
 	return 0;
 }
-
