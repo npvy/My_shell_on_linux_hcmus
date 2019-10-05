@@ -80,23 +80,50 @@ void execute(char** args, bool hasAmpersand, int redirectionMode, char* redirect
 	{
 		// Truong hop process dang chay la child process
 
-		int fd;
+		int fd_in, fd_out;
 		if (redirectionMode == REDIRECTION_MODE_OUT)
 		{
-			fd = open(redirectedFilepath, O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU);
-			if(fd == -1) perror("fd: ");
-			dup2(fd, 1);
+			fd_out = open(redirectedFilepath, O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU);
+			if(fd_out == -1) perror("fd: ");
+			dup2(fd_out, 1);
 		}
-		
-		// Truyen cac tham so da luu trong args vao execvp
 
+		if (redirectionMode == REDIRECTION_MODE_IN)
+		{
+			int i = 0;
+			while (strcmp(args[i], "<") != 0) i++;
+
+			fd_in = open(redirectedFilepath, O_RDONLY);
+			if(fd_in == -1) perror("fd: ");
+			dup2(fd_in, 0);
+
+			char commandlineFromInputFile[MAX_LENGTH];
+			fgets(commandlineFromInputFile, MAX_LENGTH, stdin);
+			commandlineFromInputFile[strlen(commandlineFromInputFile)] = '\0';
+
+			const char* delim = " ";
+			char* commandArgToken = NULL;
+			commandArgToken = strtok(commandlineFromInputFile, delim);
+			while (commandArgToken != NULL) 
+			{
+				args[i] = commandArgToken;
+				commandArgToken = strtok(NULL, delim);
+				i++;
+			}
+			// Phan tu cuoi cung cua mang args phai la NULL
+			args[i] = NULL;
+		}
+
+		// Truyen cac tham so da luu trong args vao execvp
+		
 		if (execvp(args[0], args) < 0)
 		{
 			printf("[ERROR]: Exec failed\n");
 			exit(1);
 		}
 
-		close(fd);
+		close(fd_in);
+		close(fd_out);
 	}
 	else 
 	{
