@@ -21,7 +21,7 @@
 #define REDIRECTION_MODE_OUT 2
 
 // Xu li chuoi da nhap vao
-void parse(char* commandline, char **args, char* commandArgToken, bool *hasAmpersand, int *redirectionMode)
+void parse(char* commandline, char **args, char* commandArgToken, bool *hasAmpersand, int *redirectionMode, char* redirectedFilepath)
 {
 	const char* delim = " ";
 	commandArgToken = strtok(commandline, delim);
@@ -50,13 +50,21 @@ void parse(char* commandline, char **args, char* commandArgToken, bool *hasAmper
 
 		if (argCount > 2)
 		{
-			if (strcmp(args[argCount - 2], "<") == 0) *redirectionMode = REDIRECTION_MODE_IN;
-			if (strcmp(args[argCount - 2], ">") == 0) *redirectionMode = REDIRECTION_MODE_OUT;
+			if (strcmp(args[argCount - 2], "<") == 0)
+			{
+				*redirectionMode = REDIRECTION_MODE_IN;
+				strncpy(redirectedFilepath, args[argCount - 1], sizeof(redirectedFilepath));
+			}
+			if (strcmp(args[argCount - 2], ">") == 0)
+			{
+				*redirectionMode = REDIRECTION_MODE_OUT;
+				strncpy(redirectedFilepath, args[argCount - 1], sizeof(redirectedFilepath));
+			}
 		}
 	}
 }
 
-void execute(char** args, bool hasAmpersand, int redirectionMode)
+void execute(char** args, bool hasAmpersand, int redirectionMode, char* redirectedFilepath)
 {
 	pid_t childPID = fork();
 	pid_t pid;
@@ -73,13 +81,13 @@ void execute(char** args, bool hasAmpersand, int redirectionMode)
 		// Truong hop process dang chay la child process
 
 		int fd;
-		if (redirectionMode = REDIRECTION_MODE_OUT)
+		if (redirectionMode == REDIRECTION_MODE_OUT)
 		{
-			fd = open("output.txt", O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU);
+			fd = open(redirectedFilepath, O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU);
 			if(fd == -1) perror("fd: ");
 			dup2(fd, 1);
 		}
-
+		
 		// Truyen cac tham so da luu trong args vao execvp
 
 		if (execvp(args[0], args) < 0)
@@ -205,12 +213,13 @@ int main(int argc, char* argv[])
 
 		// Flag to handle command differently if it contains a redirection operator "<" or ">"
 		int redirectionMode = REDIRECTION_MODE_NONE; // default is NONE
+		char redirectedFilepath[256] = "";
 
 		// Xu li chuoi lenh da nhap
-		parse(commandline, args, commandArgToken, &hasAmpersand, &redirectionMode, &redirectedFilepath);
+		parse(commandline, args, commandArgToken, &hasAmpersand, &redirectionMode, redirectedFilepath);
 
 		// Thuc thi lenh da nhap
-		execute(args, hasAmpersand, redirectionMode);
+		execute(args, hasAmpersand, redirectionMode, redirectedFilepath);
 	}
 
 	return 0;
