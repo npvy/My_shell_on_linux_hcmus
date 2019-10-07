@@ -20,8 +20,19 @@
 #define REDIRECTION_MODE_IN 1
 #define REDIRECTION_MODE_OUT 2
 
+void removeFileArgs(char **args)
+{
+	int i = 0;
+	while (strcmp(args[i], "<") != 0 && strcmp(args[i], ">") != 0)
+	{
+		i++;
+	}
+	args[i] = NULL;
+	args[i+1] = NULL;
+}
+
 // Xu li chuoi da nhap vao
-void parse(char* commandline, char **args, char* commandArgToken, bool *hasAmpersand, int *redirectionMode, char* redirectedFilepath)
+void parse(char* commandline, char** args, char* commandArgToken, bool *hasAmpersand, int *redirectionMode, char* redirectedFilepath)
 {
 	const char* delim = " ";
 	commandArgToken = strtok(commandline, delim);
@@ -86,6 +97,8 @@ void execute(char** args, bool hasAmpersand, int redirectionMode, char* redirect
 			fd_out = open(redirectedFilepath, O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU);
 			if(fd_out == -1) perror("fd: ");
 			dup2(fd_out, 1);
+
+			removeFileArgs(args);
 		}
 
 		if (redirectionMode == REDIRECTION_MODE_IN)
@@ -112,9 +125,20 @@ void execute(char** args, bool hasAmpersand, int redirectionMode, char* redirect
 			}
 			// Phan tu cuoi cung cua mang args phai la NULL
 			args[i] = NULL;
+
+
+			removeFileArgs(args);
 		}
 
+		/*int i = 0;
+		while (args[i] != NULL)
+		{
+			printf("%s\n", args[i]);
+			i++;
+		}*/
+
 		// Truyen cac tham so da luu trong args vao execvp
+
 		
 		if (execvp(args[0], args) < 0)
 		{
