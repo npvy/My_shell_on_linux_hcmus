@@ -235,7 +235,9 @@ void main()
 	pwd = getenv("HOME");
 
 	printf("\n***** Unix/Linux Command *****\n\n");
-	do {
+	int should run = 1; /* flag to determine when to exit program */
+	while (should run) 
+	{
 		ssize_t bsize = 0;
 		found = 0;
 
@@ -333,5 +335,5 @@ void main()
 
 		free(commandline);
 		free(args);
-	} while (1);
+	} 
 }
