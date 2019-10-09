@@ -7,7 +7,7 @@
 
 #define BUFSIZE 64     // Size of a single token
 #define TOKEN_DELIM " \t\r\n\a"  // Token Delimiters
-#define HISTORY_LIMIT 100
+#define HISTORY_LIMIT 100   // Limit element of history array
 #define MAX_LINE 80 /* The maximum length of a command */
 
 //History
@@ -62,8 +62,8 @@ void IORedirect(char **args, int i, int ioMode)
 			fd = open(args[i + 1], O_WRONLY | O_CREAT | O_TRUNC, mode);
 		if (fd < 0)
 			fprintf(stderr, "File error");
-		else {
-
+		else 
+		{
 			dup2(fd, ioMode);   // Redirect input or output according to ioMode
 			close(fd);          // Close the corresponding pointer so child process can use it
 			args[i] = NULL;
@@ -92,7 +92,7 @@ void IORedirect(char **args, int i, int ioMode)
 
 // Function for Pipe
 /* The CopyArgs function is used to selectively copy an array of strings into another array.
-* Parameter argc specifies copy limit */
+   Parameter argc specifies copy limit */
 static char** CopyArgs(int argc, char **args)
 {
 	char **copy_of_args = malloc(sizeof(char *)* (argc + 1));
@@ -145,8 +145,8 @@ void PipeRedirect(char **args, int i)
 	wait(0);   // Wait for child 2
 }
 
-/* The Cmd function takes a command line as input and splits it into tokens
-* delimited by the standard delimiters */
+/* The Cmd function takes a command line as input and splits it into tokens*/
+/* delimited by the standard delimiters */
 char **Cmd(char *cmd)
 {
 	int bufsize = BUFSIZE, i = 0;
@@ -190,6 +190,7 @@ void StartProcess(char **args, int i)
 	if (i > 0)
 		args[i] = NULL; // Set the location of '&' to NULL in order to pass it to execvp()
 	pid = fork();
+
 	if (pid == 0) // fork success. child initiated          
 	{
 		execvp(args[0], args);
@@ -197,6 +198,7 @@ void StartProcess(char **args, int i)
 		if (i == 0)
 			exit(1);
 	}
+
 	if (i == 0)
 	{
 		// If not a background process, wait till it finishes execution.
@@ -213,7 +215,7 @@ void StartProcess(char **args, int i)
 	}
 }
 
-void main()
+void Run()
 {
 	char *commandline = NULL, *pwd;
 	char **args, *options[4] = { "<", ">", "|", "&" };
@@ -234,9 +236,10 @@ void main()
 	// Get the home directory of the user
 	pwd = getenv("HOME");
 
-	printf("\n***** Unix/Linux Command *****\n\n");
 	int should_run = 1; /* flag to determine when to exit program */
-	while (should_run) 
+
+	printf("\n***** Unix/Linux Command *****\n\n");
+	while (should_run)
 	{
 		ssize_t bsize = 0;
 		found = 0;
@@ -245,30 +248,33 @@ void main()
 		getline(&commandline, &bsize, stdin);
 		args = Cmd(commandline);             // Split command line into tokens
 
-		if (args[0] == NULL) 
+		if (commandline == NULL)
 		{
 			free(commandline);
 			free(args);
 			continue;
 		}
-		if (strcmp(args[0], "exit") == 0)        // Handle the exit command. Break from command loop
+		// Handle "the exit" commandline. Break from commandline loop
+		if (strcmp(commandline, "exit") == 0)        
 			break;
-		else if (strcmp(args[0], "cd") == 0)
-		{   // Handle cd command.
-			if (args[1] == NULL) 
-
-			{              // If no argument specified in cd change to home
-				if (pwd[0] != 0) 
-				{              // directory. 
-					chdir(pwd);
+		// Handle "cd" commandline.
+		else if (strcmp(commandline, "cd") == 0)
+		{   
+			if (args[1] == NULL)
+			{   
+				// If no argument specified in cd change to home
+				if (pwd[0] != 0)
+				{              
+					chdir(pwd);	// directory. 
 				}
 			}
-			else 
+			else
 			{
 				chdir(args[1]);
 			}
 		}
-		else if (!strcmp(args[0], "history"))
+		// Handle "history" commandline.
+		else if (!strcmp(commandline, "history"))
 		{
 			for (j = HISTORY_LIMIT - 1; j >= 0; j--)
 			{
@@ -280,9 +286,8 @@ void main()
 			}
 			continue;
 		}
-
 		// Handle "!!" commandline.
-		else if (!strcmp(args[0], "!!"))
+		else if (!strcmp(commandline, "!!"))
 		{
 			if (history_count == 0)
 			{
@@ -296,12 +301,13 @@ void main()
 				StartProcess(args, 0);                      // Start a foreground process or command
 			}
 		}
-		else 
+		else
 		{
 			i = 1;
 			while (args[i] != NULL)
-			{           // Check for any of the redirect or process operators <,<,|,&
-				for (l = 0; l < 4; l++) 
+			{     
+				// Check for any of the redirect or process operators <,>,|,&
+				for (l = 0; l < 4; l++)
 				{
 					if (strcmp(args[i], options[l]) == 0)
 						break;
@@ -309,31 +315,41 @@ void main()
 				if (l < 4)
 				{
 					found = 1;
-					if (l< 3 && args[i + 1] == NULL) 
-					{   // For IORedirect and Pipe, argument is necessary
+					if (l < 3 && args[i + 1] == NULL)
+					{   
+						// For IORedirect and Pipe, argument is necessary
 						fprintf(stderr, "SHELL: parameter missing\n");
 						break;
 					}
-					if (l < 2)                          // Redirect IO,l=0 for Input, l=1 for Output
+					// Redirect IO, l=0 for Input, l=1 for Output
+					if (l < 2)                          
 						IORedirect(args, i, l);
+					// Pipe Redirection
 					else if (l == 2)
-						PipeRedirect(args, i);              // Pipe Redirection
+						PipeRedirect(args, i);  
+					// Start a background process
 					else if (l == 3)
-						StartProcess(args, i);              // Start a background process
+						StartProcess(args, i);              
 					break;
 				}
 
 				i++;
 			}
+			 // Start a foreground process or command
 			if (found == 0)
-				StartProcess(args, 0);                      // Start a foreground process or command
+				StartProcess(args, 0);                     
 		}
 
-		
 		// Store user commandline in history, even if its an invalid command. The "history" command is not stored.
 		Add_history(history, commandline, &history_count);
 
 		free(commandline);
 		free(args);
-	} 
+	}
+}
+
+int main()
+{
+	Run();
+	return 0;
 }
